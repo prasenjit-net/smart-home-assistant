@@ -1,100 +1,171 @@
-# Smart Home Assistant with ChatGPT Agent API
+# Smart Home Assistant with OpenAI Agents SDK
 
-A demo smart home assistant built with NestJS that uses OpenAI's ChatGPT Agent API with function calling to control smart home devices through text or audio commands.
+A smart home assistant built with NestJS that uses OpenAI's Agents SDK with function calling to control smart home devices through text or audio commands. Supports both **mock JSON database** and **real Home Assistant integration**.
 
-## Features
+## ✨ Features
 
 - 🏠 **Smart Home Control**: Manage lights, thermostats, door locks, fans, and sensors
-- 🤖 **AI-Powered Agent**: Uses OpenAI's GPT-4o with function calling for natural language understanding
-- 💬 **Text Commands**: Send text-based commands via REST API
-- 🎤 **Audio Commands**: Upload audio files that are transcribed using Whisper API
+- 🤖 **AI-Powered Agent**: Uses OpenAI Agents SDK with GPT-4o and 14 function tools
+- 🔄 **Stateful Conversations**: Remembers context across commands using OpenAI Conversations API
+- 💬 **Text Commands**: Natural language commands via REST API
+- 🎤 **Audio Commands**: Browser-based audio recording with Whisper API transcription
+- 🏡 **Home Assistant Integration**: Connect to your real Home Assistant instance
 - 📊 **Device State Management**: Track device states, areas, and sensor readings
-- 💾 **JSON Database**: Simple file-based storage for device inventory
+- 💾 **Dual Mode**: Use JSON database for demos or Home Assistant for real devices
 
-## Project Structure
+## 🏗️ Architecture
+
+### Two Data Source Modes
+
+1. **JSON Database Mode** (Default): Mock devices for testing and demos
+2. **Home Assistant Mode**: Control real devices via Home Assistant REST API
+
+### Project Structure
 
 ```
 src/
-├── models/           # TypeScript interfaces for devices, sensors, and states
-├── database/         # JSON-based database service
-├── smarthome/        # Smart home device management service
-├── agent/           # OpenAI agent service with function calling
-├── assistant/       # API controllers and module
-└── main.ts          # Application entry point
+├── models/              # TypeScript interfaces for devices, sensors, and states
+├── database/            # JSON-based database service (mock mode)
+├── homeassistant/       # Home Assistant API integration
+│   ├── homeassistant.service.ts    # HA REST API client
+│   ├── entity-mapper.service.ts    # Convert HA entities to Device models
+│   └── homeassistant.types.ts      # HA type definitions
+├── smarthome/           # Smart home device management (dual-mode)
+├── agent/              # OpenAI Agents SDK with 14 function tools
+├── assistant/          # API controllers and module
+└── main.ts             # Application entry point
 ```
 
-## Installation
+## 📦 Installation
 
 1. Clone the repository and install dependencies:
 
 ```bash
+git clone https://github.com/prasenjit-net/smart-home-assistant.git
+cd smart-home-assistant
 npm install
 ```
 
-2. Set up your OpenAI API key:
+2. Configure environment variables:
 
-Edit the `.env` file and add your OpenAI API key:
-
-```
-OPENAI_API_KEY=sk-your-actual-api-key-here
-```
-
-## Running the Application
+Copy `.env.example` to `.env`:
 
 ```bash
-# Development mode
-npm run start
+cp .env.example .env
+```
 
-# Watch mode (auto-reload)
+Edit `.env` and add your configuration:
+
+```env
+# OpenAI API Key (Required)
+OPENAI_API_KEY=sk-your-actual-api-key-here
+
+# Home Assistant Configuration (Optional - for real device control)
+HOME_ASSISTANT_URL=https://your-ha-instance.com
+HOME_ASSISTANT_TOKEN=your_long_lived_access_token_here
+
+# Feature Flag: Use Home Assistant or JSON Database
+USE_HOME_ASSISTANT=false  # Set to true to use Home Assistant
+```
+
+### Getting a Home Assistant Token
+
+1. Go to your Home Assistant profile: `https://your-ha-instance.com/profile`
+2. Scroll to "Long-Lived Access Tokens"
+3. Click "Create Token"
+4. Give it a name like "Smart Home Assistant AI"
+5. Copy the token to your `.env` file
+
+## 🚀 Running the Application
+
+```bash
+# Development mode with auto-reload
 npm run start:dev
 
 # Production mode
 npm run start:prod
+
+# Build only
+npm run build
 ```
 
 The server will start on `http://localhost:3000`
 
-## API Endpoints
+## 🌐 Web Interface
 
-### Health Check
-```bash
-GET /assistant/health
-```
+Open `http://localhost:3000/index.html` in your browser for an interactive web interface with:
+- Text command input
+- Browser-based audio recording
+- Real-time responses
+- Session management
+- Example commands
 
-### List All Devices
-```bash
-GET /assistant/devices
-```
+## 📡 API Endpoints
 
-### List All Sensors
-```bash
-GET /assistant/sensors
-```
+### Commands
 
-### List All Areas
-```bash
-GET /assistant/areas
-```
-
-### Send Text Command
+#### Send Text Command
 ```bash
 POST /assistant/command/text
 Content-Type: application/json
 
 {
-  "message": "Turn on the living room light"
+  "message": "Turn on the living room light",
+  "sessionId": "conv_abc123"  # Optional - for conversation continuity
 }
 ```
 
-### Send Audio Command
+#### Send Audio Command
 ```bash
 POST /assistant/command/audio
 Content-Type: multipart/form-data
 
-audio: <audio file (WAV, MP3, etc.)>
+audio: <audio file>
+sessionId: conv_abc123  # Optional
 ```
 
-## Example Commands
+### Device & Sensor Information
+
+#### List All Devices
+```bash
+GET /assistant/devices
+```
+
+#### List All Sensors
+```bash
+GET /assistant/sensors
+```
+
+#### List All Areas
+```bash
+GET /assistant/areas
+```
+
+### Health & Status
+
+#### Health Check
+```bash
+GET /assistant/health
+```
+
+### Home Assistant Integration Endpoints
+
+#### Test HA Connection
+```bash
+GET /assistant/ha/test
+```
+
+#### Get HA Status & Version
+```bash
+GET /assistant/ha/status
+```
+
+#### List All HA Entities
+```bash
+GET /assistant/ha/entities
+```
+
+## 💡 Example Commands
 
 ### Text Commands
 
@@ -161,22 +232,31 @@ The application initializes with the following sample devices:
 - Bathroom
 - Garage
 
-## Device Control Functions
+## 🛠️ AI Function Tools
 
-The AI agent has access to the following functions:
+The OpenAI agent has access to 14 function tools for smart home control:
 
-1. **list_devices** - List all devices or filter by area
-2. **list_sensors** - List all sensors or filter by area
-3. **get_device_status** - Get current status of a device
-4. **get_sensor_status** - Get current sensor reading
-5. **turn_on_device** - Turn on a device
-6. **turn_off_device** - Turn off a device
-7. **set_brightness** - Set light brightness (0-100)
-8. **set_temperature** - Set thermostat temperature
-9. **lock_door** - Lock a door
-10. **unlock_door** - Unlock a door
-11. **set_fan_speed** - Set fan speed (0-100)
-12. **list_areas** - List all areas in the home
+### Device Listing
+1. **list_devices** - List all smart home devices
+2. **list_devices_by_area** - List devices in a specific area/room
+3. **list_sensors** - List all sensors
+4. **list_sensors_by_area** - List sensors in a specific area
+5. **list_areas** - List all areas in the home
+
+### Device Status
+6. **get_device_status** - Get current status of a specific device
+7. **get_sensor_status** - Get current sensor reading
+
+### Device Control
+8. **turn_on_device** - Turn on lights, switches, fans
+9. **turn_off_device** - Turn off devices
+10. **set_brightness** - Set light brightness (0-100)
+11. **set_temperature** - Set thermostat temperature
+12. **lock_door** - Lock a door
+13. **unlock_door** - Unlock a door
+14. **set_fan_speed** - Set fan speed (0-100)
+
+All tools work with both JSON database mode and Home Assistant mode!
 
 ## Database
 
