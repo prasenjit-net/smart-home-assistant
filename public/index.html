@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .audio-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .recording-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .record-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #e74c3c;
+            border: 4px solid #c0392b;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .record-button:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .record-button.recording {
+            background: #27ae60;
+            border-color: #229954;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+            }
+
+            50% {
+                box-shadow: 0 0 0 20px rgba(231, 76, 60, 0);
+            }
+        }
+
+        .record-button.recording {
+            animation: pulse-green 1.5s infinite;
+        }
+
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7);
+            }
+
+            50% {
+                box-shadow: 0 0 0 20px rgba(39, 174, 96, 0);
+            }
+        }
+
+        .record-icon {
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .record-button.recording .record-icon {
+            border-radius: 4px;
+            width: 25px;
+            height: 25px;
+        }
+
+        .recording-info {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            min-height: 20px;
+        }
+
+        .recording-time {
+            font-weight: 600;
+            color: #e74c3c;
+            font-size: 1.2em;
+        }
+
+        .audio-playback {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        input[type="file"] {
+            flex: 1;
+            padding: 10px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .response-section {
+            margin-top: 30px;
+        }
+
+        .response-box {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-style: italic;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .success {
+            color: #27ae60;
+        }
+
+        .devices-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .device-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .device-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .device-details {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .example-commands {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .example-commands h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+
+        .example-commands ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        .example-commands li {
+            margin-bottom: 5px;
+            color: #856404;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .example-commands li:hover {
+            color: #533f03;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🏠 Smart Home Assistant</h1>
+        <p class="subtitle">Control your smart home with natural language using AI</p>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="tabs" style="margin-bottom: 0;">
+                <div class="tab active" onclick="switchTab('text')">💬 Text Command</div>
+                <div class="tab" onclick="switchTab('audio')">🎤 Audio Command</div>
+                <div class="tab" onclick="switchTab('devices')">📱 Devices</div>
+            </div>
+            <button onclick="clearSession()" style="padding: 10px 20px; background: #e74c3c; font-size: 14px;">
+                🔄 New Conversation
+            </button>
+        </div>
+
+        <div id="text-tab" class="tab-content active">
+            <div class="example-commands">
+                <h3>💡 Try these example commands:</h3>
+                <ul>
+                    <li onclick="setCommand('What devices are in the living room?')">• What devices are in the living
+                        room?</li>
+                    <li onclick="setCommand('Turn on the living room light')">• Turn on the living room light</li>
+                    <li onclick="setCommand('Set the bedroom lamp to 50% brightness')">• Set the bedroom lamp to 50%
+                        brightness</li>
+                    <li onclick="setCommand('What is the temperature in the living room?')">• What is the temperature in
+                        the living room?</li>
+                    <li onclick="setCommand('Lock the front door')">• Lock the front door</li>
+                    <li onclick="setCommand('Set the thermostat to 24 degrees')">• Set the thermostat to 24 degrees</li>
+                </ul>
+            </div>
+
+            <div class="input-section">
+                <div class="input-group">
+                    <input type="text" id="textCommand"
+                        placeholder="Enter your command... (e.g., 'Turn on the living room light')" />
+                    <button onclick="sendTextCommand()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="audio-tab" class="tab-content">
+            <div class="input-section">
+                <div class="audio-controls">
+                    <div class="recording-info" id="recordingInfo">
+                        Click the microphone to start recording
+                    </div>
+                    <div class="recording-controls">
+                        <button class="record-button" id="recordButton" onclick="toggleRecording()">
+                            <div class="record-icon"></div>
+                        </button>
+                    </div>
+                    <div class="recording-time" id="recordingTime" style="display: none;">00:00</div>
+                    <audio id="audioPlayback" class="audio-playback" controls style="display: none;"></audio>
+                    <button id="sendRecordingButton" onclick="sendRecordedAudio()" style="display: none; width: 100%;">
+                        🎤 Send Recording
+                    </button>
+                </div>
+                <p style="margin-top: 20px; color: #666; font-size: 0.9em; text-align: center;">
+                    Record your voice command by clicking the microphone button
+                </p>
+            </div>
+        </div>
+
+        <div id="devices-tab" class="tab-content">
+            <button onclick="loadDevices()" style="width: 100%; margin-bottom: 20px;">🔄 Refresh Devices</button>
+            <div id="devicesList"></div>
+        </div>
+
+        <div class="response-section">
+            <h3 style="margin-bottom: 15px;">Response:</h3>
+            <div class="response-box" id="response">
+                <span style="color: #999;">Waiting for command...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/assistant';
+
+        // Session management
+        let currentSessionId = sessionStorage.getItem('smart_home_session_id') || null;
+
+        // Audio recording variables
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordingInterval;
+        let recordingStartTime;
+        let recordedBlob = null;
+
+        // Save session ID to sessionStorage
+        function saveSessionId(sessionId) {
+            currentSessionId = sessionId;
+            sessionStorage.setItem('smart_home_session_id', sessionId);
+            updateSessionDisplay();
+        }
+
+        // Clear session
+        function clearSession() {
+            currentSessionId = null;
+            sessionStorage.removeItem('smart_home_session_id');
+            updateSessionDisplay();
+            showResponse('🔄 New conversation started', false);
+        }
+
+        // Update session display (we'll add this to UI later)
+        function updateSessionDisplay() {
+            // Could show session ID in UI if needed
+            console.log('Current session:', currentSessionId || 'None (will create new)');
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+
+            if (tab === 'devices') {
+                loadDevices();
+            } else if (tab === 'audio') {
+                resetRecording();
+            }
+        }
+
+        function setCommand(command) {
+            document.getElementById('textCommand').value = command;
+        }
+
+        function showResponse(message, isError = false) {
+            const responseBox = document.getElementById('response');
+            responseBox.innerHTML = isError
+                ? `<span class="error">${message}</span>`
+                : message;
+        }
+
+        function showLoading() {
+            const responseBox = document.getElementById('response');
+            responseBox.innerHTML = '<span class="loading">Processing your command...</span>';
+        }
+
+        // Audio Recording Functions
+        async function toggleRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const audioUrl = URL.createObjectURL(recordedBlob);
+                    const audioPlayback = document.getElementById('audioPlayback');
+                    audioPlayback.src = audioUrl;
+                    audioPlayback.style.display = 'block';
+                    document.getElementById('sendRecordingButton').style.display = 'block';
+
+                    // Stop all tracks to release the microphone
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                recordingStartTime = Date.now();
+
+                // Update UI
+                document.getElementById('recordButton').classList.add('recording');
+                document.getElementById('recordingInfo').textContent = '🔴 Recording... Click again to stop';
+                document.getElementById('recordingTime').style.display = 'block';
+
+                // Start timer
+                recordingInterval = setInterval(updateRecordingTime, 100);
+
+            } catch (error) {
+                showResponse(`Error accessing microphone: ${error.message}\n\nPlease ensure you have granted microphone permissions.`, true);
+                console.error('Error accessing microphone:', error);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                clearInterval(recordingInterval);
+
+                // Update UI
+                document.getElementById('recordButton').classList.remove('recording');
+                document.getElementById('recordingInfo').textContent = '✅ Recording complete! Review and send below';
+                document.getElementById('recordingTime').style.display = 'none';
+            }
+        }
+
+        function updateRecordingTime() {
+            const elapsed = Date.now() - recordingStartTime;
+            const seconds = Math.floor(elapsed / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+
+            const timeString = `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
+            document.getElementById('recordingTime').textContent = timeString;
+        }
+
+        function resetRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording();
+            }
+
+            audioChunks = [];
+            recordedBlob = null;
+
+            document.getElementById('recordButton').classList.remove('recording');
+            document.getElementById('recordingInfo').textContent = 'Click the microphone to start recording';
+            document.getElementById('recordingTime').style.display = 'none';
+            document.getElementById('recordingTime').textContent = '00:00';
+            document.getElementById('audioPlayback').style.display = 'none';
+            document.getElementById('sendRecordingButton').style.display = 'none';
+        }
+
+        async function sendRecordedAudio() {
+            if (!recordedBlob) {
+                showResponse('No recording available. Please record audio first.', true);
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', recordedBlob, 'recording.webm');
+                if (currentSessionId) {
+                    formData.append('sessionId', currentSessionId);
+                }
+
+                const response = await fetch(`${API_BASE}/command/audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Save session ID
+                    if (data.sessionId) {
+                        saveSessionId(data.sessionId);
+                    }
+                    showResponse(`🎤 Transcription: "${data.transcription}"\n\n🤖 Assistant: ${data.response}`);
+                    resetRecording();
+                } else {
+                    showResponse(`Error: ${data.message || 'Unknown error'}`, true);
+                }
+            } catch (error) {
+                showResponse(`Error: ${error.message}\n\nMake sure the server is running on ${API_BASE}`, true);
+            }
+        }
+
+        async function sendTextCommand() {
+            const input = document.getElementById('textCommand');
+            const command = input.value.trim();
+
+            if (!command) {
+                showResponse('Please enter a command', true);
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_BASE}/command/text`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: command,
+                        sessionId: currentSessionId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Save session ID
+                    if (data.sessionId) {
+                        saveSessionId(data.sessionId);
+                    }
+                    showResponse(`📝 Your command: "${data.message}"\n\n🤖 Assistant: ${data.response}`);
+                } else {
+                    showResponse(`Error: ${data.message || 'Unknown error'}`, true);
+                }
+            } catch (error) {
+                showResponse(`Error: ${error.message}\n\nMake sure the server is running on ${API_BASE}`, true);
+            }
+        }
+
+        async function sendAudioCommand() {
+            const fileInput = document.getElementById('audioFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showResponse('Please select an audio file', true);
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('audio', file);
+
+                const response = await fetch(`${API_BASE}/command/audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showResponse(`🎤 Transcription: "${data.transcription}"\n\n🤖 Assistant: ${data.response}`);
+                } else {
+                    showResponse(`Error: ${data.message || 'Unknown error'}`, true);
+                }
+            } catch (error) {
+                showResponse(`Error: ${error.message}\n\nMake sure the server is running on ${API_BASE}`, true);
+            }
+        }
+
+        async function loadDevices() {
+            const devicesList = document.getElementById('devicesList');
+            devicesList.innerHTML = '<div class="loading">Loading devices...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/devices`);
+                const data = await response.json();
+
+                if (data.success && data.devices) {
+                    devicesList.innerHTML = data.devices.map(device => `
+                        <div class="device-card">
+                            <div class="device-name">${device.name}</div>
+                            <div class="device-details">
+                                <strong>ID:</strong> ${device.id} | 
+                                <strong>Type:</strong> ${device.type} | 
+                                <strong>Area:</strong> ${device.area}<br>
+                                <strong>State:</strong> ${JSON.stringify(device.state)}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    devicesList.innerHTML = '<div class="error">Failed to load devices</div>';
+                }
+            } catch (error) {
+                devicesList.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        // Allow Enter key to send text command
+        document.getElementById('textCommand').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendTextCommand();
+            }
+        });
+    </script>
+</body>
+
+</html>
