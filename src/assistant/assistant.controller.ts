@@ -161,7 +161,7 @@ export class AssistantController {
 
         try {
             const entities = await this.homeAssistantService.getAllStates();
-            
+
             // Group by domain for easier viewing
             const grouped = entities.reduce((acc, entity) => {
                 const domain = entity.entity_id.split('.')[0];

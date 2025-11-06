@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Agent, OpenAIConversationsSession, run, tool } from '@openai/agents';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { SmartHomeService } from '../smarthome/smarthome.service';
 
 @Injectable()
 export class AgentService {
+    private readonly logger = new Logger(AgentService.name);
     private agent: Agent;
     private openai: OpenAI;
     private readonly systemPrompt = `You are a helpful smart home assistant. You can control devices like lights, thermostats, door locks, and fans. You can also read sensor values.
@@ -233,9 +234,21 @@ Remember previous context in the conversation to handle follow-up commands like 
      */
     async processCommand(userMessage: string, conversationId?: string): Promise<{ response: string; sessionId: string }> {
         try {
+            // Validate and sanitize conversation ID
+            // OpenAI requires conversation IDs to start with 'conv_'
+            let validConversationId: string | undefined = conversationId;
+
+            if (conversationId) {
+                // If it doesn't start with 'conv_', it's an old session ID - ignore it
+                if (!conversationId.startsWith('conv_')) {
+                    this.logger.log(`Invalid conversation ID format: ${conversationId}, creating new conversation`);
+                    validConversationId = undefined;
+                }
+            }
+
             // Create or reuse OpenAIConversationsSession
             const session = new OpenAIConversationsSession({
-                conversationId: conversationId,
+                conversationId: validConversationId,
                 apiKey: this.configService.get<string>('OPENAI_API_KEY'),
             });
 

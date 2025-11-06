@@ -17,7 +17,7 @@ export class SmartHomeService {
         private readonly entityMapperService: EntityMapperService,
     ) {
         this.useHomeAssistant = this.configService.get<string>('USE_HOME_ASSISTANT') === 'true';
-        
+
         if (this.useHomeAssistant) {
             this.logger.log('Using Home Assistant as data source');
         } else {
