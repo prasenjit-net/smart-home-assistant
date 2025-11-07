@@ -362,13 +362,9 @@
                         </button>
                     </div>
                     <div class="recording-time" id="recordingTime" style="display: none;">00:00</div>
-                    <audio id="audioPlayback" class="audio-playback" controls style="display: none;"></audio>
-                    <button id="sendRecordingButton" onclick="sendRecordedAudio()" style="display: none; width: 100%;">
-                        🎤 Send Recording
-                    </button>
                 </div>
                 <p style="margin-top: 20px; color: #666; font-size: 0.9em; text-align: center;">
-                    Record your voice command by clicking the microphone button
+                    🎤 Click to start • Recording auto-stops after 2 seconds of silence • Click again to stop manually
                 </p>
             </div>
         </div>
@@ -398,6 +394,12 @@
         let recordingInterval;
         let recordingStartTime;
         let recordedBlob = null;
+        let audioContext;
+        let analyser;
+        let silenceTimeout;
+        let silenceStart = null;
+        const SILENCE_THRESHOLD = 30; // Audio level threshold for silence
+        const SILENCE_DURATION = 2000; // 2 seconds of silence before auto-stop
 
         // Save session ID to sessionStorage
         function saveSessionId(sessionId) {
@@ -462,23 +464,36 @@
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Set up audio context for silence detection
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 512;
+                
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
+                silenceStart = null;
 
                 mediaRecorder.ondataavailable = (event) => {
                     audioChunks.push(event.data);
                 };
 
-                mediaRecorder.onstop = () => {
+                mediaRecorder.onstop = async () => {
                     recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const audioUrl = URL.createObjectURL(recordedBlob);
-                    const audioPlayback = document.getElementById('audioPlayback');
-                    audioPlayback.src = audioUrl;
-                    audioPlayback.style.display = 'block';
-                    document.getElementById('sendRecordingButton').style.display = 'block';
-
+                    
                     // Stop all tracks to release the microphone
                     stream.getTracks().forEach(track => track.stop());
+                    
+                    // Close audio context
+                    if (audioContext) {
+                        audioContext.close();
+                        audioContext = null;
+                    }
+
+                    // Auto-send the recording immediately
+                    await sendRecordedAudio();
                 };
 
                 mediaRecorder.start();
@@ -486,16 +501,53 @@
 
                 // Update UI
                 document.getElementById('recordButton').classList.add('recording');
-                document.getElementById('recordingInfo').textContent = '🔴 Recording... Click again to stop';
+                document.getElementById('recordingInfo').textContent = '🔴 Recording... Speak now (auto-stops on silence)';
                 document.getElementById('recordingTime').style.display = 'block';
 
                 // Start timer
                 recordingInterval = setInterval(updateRecordingTime, 100);
 
+                // Start silence detection
+                detectSilence();
+
             } catch (error) {
                 showResponse(`Error accessing microphone: ${error.message}\n\nPlease ensure you have granted microphone permissions.`, true);
                 console.error('Error accessing microphone:', error);
             }
+        }
+
+        function detectSilence() {
+            if (!analyser || !mediaRecorder || mediaRecorder.state !== 'recording') {
+                return;
+            }
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            // Calculate average volume
+            const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+
+            if (average < SILENCE_THRESHOLD) {
+                // Silence detected
+                if (silenceStart === null) {
+                    silenceStart = Date.now();
+                    document.getElementById('recordingInfo').textContent = '🔴 Recording... (silence detected)';
+                } else if (Date.now() - silenceStart > SILENCE_DURATION) {
+                    // Stop recording after silence duration
+                    console.log('Auto-stopping due to silence');
+                    document.getElementById('recordingInfo').textContent = '⏹️ Stopped by silence detection';
+                    stopRecording();
+                    return;
+                }
+            } else {
+                // Sound detected, reset silence timer
+                silenceStart = null;
+                document.getElementById('recordingInfo').textContent = '🔴 Recording... Speak now (auto-stops on silence)';
+            }
+
+            // Continue checking
+            requestAnimationFrame(detectSilence);
         }
 
         function stopRecording() {
@@ -505,7 +557,7 @@
 
                 // Update UI
                 document.getElementById('recordButton').classList.remove('recording');
-                document.getElementById('recordingInfo').textContent = '✅ Recording complete! Review and send below';
+                document.getElementById('recordingInfo').textContent = '⏹️ Processing recording...';
                 document.getElementById('recordingTime').style.display = 'none';
             }
         }
@@ -527,13 +579,17 @@
 
             audioChunks = [];
             recordedBlob = null;
+            silenceStart = null;
+
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
 
             document.getElementById('recordButton').classList.remove('recording');
             document.getElementById('recordingInfo').textContent = 'Click the microphone to start recording';
             document.getElementById('recordingTime').style.display = 'none';
             document.getElementById('recordingTime').textContent = '00:00';
-            document.getElementById('audioPlayback').style.display = 'none';
-            document.getElementById('sendRecordingButton').style.display = 'none';
         }
 
         async function sendRecordedAudio() {
